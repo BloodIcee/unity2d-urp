@@ -147,6 +147,8 @@ public class CardController
             
             await UniTask.Delay((int)(config.MatchDelay * 1000), cancellationToken: cancellationToken);
             
+            first.UpdateVisuals();
+            second.UpdateVisuals();
             first.SetInteractable(false);
             second.SetInteractable(false);
         }
