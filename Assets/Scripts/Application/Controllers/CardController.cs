@@ -7,8 +7,10 @@ public class CardController
     private GameStateMachine stateMachine;
     private GameConfig config;
     private AnimationService animationService;
-    private List<CardView> revealedCards = new List<CardView>();
+    private List<CardView> selectedCards = new List<CardView>();
     private CancellationTokenSource cts;
+
+    private HashSet<CardView> processingCards = new HashSet<CardView>();
 
     public CardController(GameStateMachine gameStateMachine, GameConfig gameConfig, AnimationService animService)
     {
@@ -36,10 +38,13 @@ public class CardController
         if (state != CardState.Hidden)
             return false;
 
-        if (revealedCards.Contains(cardView))
+        if (selectedCards.Contains(cardView))
             return false;
 
-        if (revealedCards.Count >= 2)
+        if (processingCards.Contains(cardView))
+            return false;
+
+        if (selectedCards.Count >= 2)
             return false;
 
         return true;
@@ -47,31 +52,29 @@ public class CardController
 
     private async UniTaskVoid RevealCardAsync(CardView cardView, CancellationToken cancellationToken)
     {
-        revealedCards.Add(cardView);
+        selectedCards.Add(cardView);
+        processingCards.Add(cardView);
         
         await animationService.AnimateCardFlip(cardView, true, cancellationToken);
         
         cardView.Model.CurrentState = CardState.Revealed;
         cardView.UpdateVisuals();
 
-        if (revealedCards.Count == 1)
+        if (selectedCards.Count == 2)
         {
-            stateMachine.ChangeState(GameState.CardRevealing);
-        }
-        else if (revealedCards.Count == 2)
-        {
-            stateMachine.ChangeState(GameState.ComparingCards);
-            await CheckMatchAsync(cancellationToken);
+            List<CardView> pairToProcess = new List<CardView>(selectedCards);
+            selectedCards.Clear();
+
+            ProcessPairAsync(pairToProcess, cancellationToken).Forget();
         }
     }
 
-    private async UniTask CheckMatchAsync(CancellationToken cancellationToken)
+    private async UniTaskVoid ProcessPairAsync(List<CardView> pair, CancellationToken cancellationToken)
     {
-        if (revealedCards.Count != 2)
-            return;
+        if (pair.Count != 2) return;
 
-        CardView first = revealedCards[0];
-        CardView second = revealedCards[1];
+        CardView first = pair[0];
+        CardView second = pair[1];
 
         bool isMatch = first.Model.IsPairWith(second.Model);
 
@@ -79,41 +82,43 @@ public class CardController
         {
             first.Model.CurrentState = CardState.Matched;
             second.Model.CurrentState = CardState.Matched;
-            stateMachine.ChangeState(GameState.Matched);
             
-            await animationService.AnimateMatch(first, cancellationToken);
-            await animationService.AnimateMatch(second, cancellationToken);
+            await UniTask.WhenAll(
+                animationService.AnimateMatch(first, cancellationToken),
+                animationService.AnimateMatch(second, cancellationToken)
+            );
             
             await UniTask.Delay((int)(config.MatchDelay * 1000), cancellationToken: cancellationToken);
             
             first.SetInteractable(false);
             second.SetInteractable(false);
-            revealedCards.Clear();
-            stateMachine.ChangeState(GameState.Idle);
         }
         else
         {
             first.Model.CurrentState = CardState.Mismatched;
             second.Model.CurrentState = CardState.Mismatched;
-            stateMachine.ChangeState(GameState.Mismatched);
             
-            await animationService.AnimateMismatch(first, cancellationToken);
-            await animationService.AnimateMismatch(second, cancellationToken);
+            await UniTask.WhenAll(
+                animationService.AnimateMismatch(first, cancellationToken),
+                animationService.AnimateMismatch(second, cancellationToken)
+            );
             
             await UniTask.Delay((int)(config.MismatchDelay * 1000), cancellationToken: cancellationToken);
             
             first.Model.CurrentState = CardState.Hidden;
             second.Model.CurrentState = CardState.Hidden;
             
-            await animationService.AnimateCardFlip(first, false, cancellationToken);
-            await animationService.AnimateCardFlip(second, false, cancellationToken);
+            await UniTask.WhenAll(
+                animationService.AnimateCardFlip(first, false, cancellationToken),
+                animationService.AnimateCardFlip(second, false, cancellationToken)
+            );
             
             first.UpdateVisuals();
             second.UpdateVisuals();
-            
-            revealedCards.Clear();
-            stateMachine.ChangeState(GameState.Idle);
         }
+
+        processingCards.Remove(first);
+        processingCards.Remove(second);
     }
 
     public void Reset()
@@ -121,7 +126,8 @@ public class CardController
         cts?.Cancel();
         cts?.Dispose();
         cts = new CancellationTokenSource();
-        revealedCards.Clear();
+        selectedCards.Clear();
+        processingCards.Clear();
     }
 
     public void Dispose()
