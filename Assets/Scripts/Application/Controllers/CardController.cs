@@ -22,6 +22,7 @@ public class CardController
     private readonly AudioManager audioManager;
 
     private HashSet<CardView> processingCards = new HashSet<CardView>();
+    private List<CardView> pairBuffer = new List<CardView>(2);
 
     public CardController(
         GameStateMachine gameStateMachine, 
@@ -101,10 +102,11 @@ public class CardController
 
         if (selectedCards.Count == 2)
         {
-            List<CardView> pairToProcess = new List<CardView>(selectedCards);
+            pairBuffer.Clear();
+            pairBuffer.AddRange(selectedCards);
             selectedCards.Clear();
 
-            ProcessPairAsync(pairToProcess, cancellationToken).Forget();
+            ProcessPairAsync(pairBuffer, cancellationToken).Forget();
         }
     }
 
