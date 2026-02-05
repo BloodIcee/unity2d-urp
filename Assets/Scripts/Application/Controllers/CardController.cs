@@ -13,6 +13,7 @@ public class CardController
     public System.Action OnGameWon;
     public System.Action OnGameLost;
     public System.Action<int> OnMovesUpdated;
+    public System.Action OnPairProcessed;
     
     private bool isGameEnding;
 
@@ -183,6 +184,8 @@ public class CardController
 
         processingCards.Remove(first);
         processingCards.Remove(second);
+        
+        OnPairProcessed?.Invoke();
         
         if (!isGameEnding)
             stateMachine.ChangeState(GameState.Idle);

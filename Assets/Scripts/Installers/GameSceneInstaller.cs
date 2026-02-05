@@ -13,6 +13,7 @@ public class GameSceneInstaller : MonoInstaller
         Container.Bind<AnimationService>().AsSingle();
         Container.Bind<AudioManager>().FromNewComponentOnNewGameObject().AsSingle();
         Container.Bind<IScoringService>().To<ScoringService>().AsSingle();
+        Container.Bind<ISaveLoadService>().To<SaveLoadService>().AsSingle();
         Container.Bind<CardController>().AsSingle();
         Container.Bind<GameModel>().AsSingle();
         Container.Bind<GameController>().FromComponentInHierarchy().AsSingle();

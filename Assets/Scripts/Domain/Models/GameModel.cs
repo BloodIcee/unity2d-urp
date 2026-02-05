@@ -5,8 +5,8 @@ public class GameModel
 {
     public GridModel Grid { get; private set; }
     public int TotalMatches { get; private set; }
-    public int CurrentMatches { get; private set; }
-    public int MovesLeft { get; private set; }
+    public int CurrentMatches { get; set; }
+    public int MovesLeft { get; set; }
     public int TotalMoves { get; private set; }
     
     public bool IsGameComplete => CurrentMatches >= TotalMatches;
