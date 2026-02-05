@@ -36,6 +36,9 @@ public class CardController
         if (state != CardState.Hidden)
             return false;
 
+        if (revealedCards.Contains(cardView))
+            return false;
+
         if (revealedCards.Count >= 2)
             return false;
 
@@ -44,13 +47,12 @@ public class CardController
 
     private async UniTaskVoid RevealCardAsync(CardView cardView, CancellationToken cancellationToken)
     {
-        cardView.Model.CurrentState = CardState.Revealing;
+        revealedCards.Add(cardView);
         
         await animationService.AnimateCardFlip(cardView, true, cancellationToken);
         
         cardView.Model.CurrentState = CardState.Revealed;
         cardView.UpdateVisuals();
-        revealedCards.Add(cardView);
 
         if (revealedCards.Count == 1)
         {

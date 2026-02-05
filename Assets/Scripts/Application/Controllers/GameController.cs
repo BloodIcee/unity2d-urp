@@ -41,7 +41,7 @@ public class GameController : MonoBehaviour
     {
         stateMachine.ChangeState(GameState.Initializing);
         
-        GridLayout layout = gameConfig.GetDefaultLayout();
+        GridLayout layout = gameConfig.GetRandomLayout();
         CreateGrid(layout);
         
         stateMachine.ChangeState(GameState.Idle);
@@ -57,8 +57,7 @@ public class GameController : MonoBehaviour
         gridView.SetupGrid(
             layout.Rows, 
             layout.Columns, 
-            gameConfig.CardSize, 
-            gameConfig.CardSpacing
+            gameConfig.CardSize
         );
 
         List<CardModel> cards = GenerateCards();
@@ -69,10 +68,21 @@ public class GameController : MonoBehaviour
     {
         List<CardModel> cards = new List<CardModel>();
         int totalPairs = gridModel.TotalCards / 2;
+        
+        List<Sprite> availableSprites = GetAvailableSprites();
+        
+        // Randomize sprites selection
+        ShuffleSprites(availableSprites);
+
+        if (availableSprites.Count < totalPairs)
+        {
+            UnityEngine.Debug.LogError($"Not enough sprites! Need {totalPairs}, have {availableSprites.Count}");
+            return cards;
+        }
 
         for (int pairId = 0; pairId < totalPairs; pairId++)
         {
-            Sprite sprite = GetRandomCardSprite();
+            Sprite sprite = availableSprites[pairId];
 
             CardModel card1 = new CardModel(cards.Count, pairId, sprite);
             CardModel card2 = new CardModel(cards.Count + 1, pairId, sprite);
@@ -89,24 +99,53 @@ public class GameController : MonoBehaviour
     {
         for (int i = cards.Count - 1; i > 0; i--)
         {
-            int randomIndex = Random.Range(0, i + 1);
+            int randomIndex = UnityEngine.Random.Range(0, i + 1);
             CardModel temp = cards[i];
             cards[i] = cards[randomIndex];
             cards[randomIndex] = temp;
         }
     }
 
-    private Sprite GetRandomCardSprite()
+    private void ShuffleSprites(List<Sprite> sprites)
     {
+        for (int i = sprites.Count - 1; i > 0; i--)
+        {
+            int randomIndex = UnityEngine.Random.Range(0, i + 1);
+            Sprite temp = sprites[i];
+            sprites[i] = sprites[randomIndex];
+            sprites[randomIndex] = temp;
+        }
+    }
+
+    private List<Sprite> GetAvailableSprites()
+    {
+        List<Sprite> sprites = new List<Sprite>();
+        
         if (gameConfig.CardAtlas == null)
-            return null;
+        {
+            UnityEngine.Debug.LogError("CardAtlas is null!");
+            return sprites;
+        }
 
         int spriteCount = gameConfig.CardAtlas.spriteCount;
-        if (spriteCount == 0)
-            return null;
+        for (int i = 0; i < spriteCount; i++)
+        {
+            // Assuming sprites are named card_0, card_1, etc.
+            // Or we can just get all sprites if we want to be more generic, 
+            // but the original code used specific naming. keeping it but maybe we should make it looser?
+            // The user said: "should be taken randomly from sprite atlas, not sequentially".
+            // So getting them by name is fine, as long as we get ALL of them then shuffle.
+            Sprite sprite = gameConfig.CardAtlas.GetSprite($"card_{i}");
+            if (sprite != null)
+                sprites.Add(sprite);
+        }
+        
+        if (sprites.Count == 0)
+        {
+            UnityEngine.Debug.LogError("No sprites found in CardAtlas! Make sure sprites are named: card_0, card_1, etc.");
+        }
 
-        int randomIndex = Random.Range(0, spriteCount);
-        return gameConfig.CardAtlas.GetSprite($"card_{randomIndex}");
+        return sprites;
     }
 
     private void SpawnCards(List<CardModel> cards)

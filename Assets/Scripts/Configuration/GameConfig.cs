@@ -10,7 +10,6 @@ public class GameConfig : ScriptableObject
     
     [Header("Card Settings")]
     public Vector2 CardSize = new Vector2(1.8f, 2.4f);
-    public Vector2 CardSpacing = new Vector2(0.2f, 0.2f);
     
     [Header("Card Sprites")]
     public SpriteAtlas CardAtlas;
@@ -28,12 +27,35 @@ public class GameConfig : ScriptableObject
     public float ComboMultiplier = 1.5f;
     public int MismatchPenalty = 10;
 
+    public void OnValidate()
+    {
+        if (SupportedLayouts != null)
+        {
+            foreach (var layout in SupportedLayouts)
+            {
+                if (layout != null)
+                {
+                    layout.Name = $"{layout.Rows}x{layout.Columns}";
+                }
+            }
+        }
+    }
+
     public GridLayout GetDefaultLayout()
     {
-        if (SupportedLayouts.Length == 0)
+        if (SupportedLayouts == null || SupportedLayouts.Length == 0)
             return new GridLayout { Name = "2x2", Rows = 2, Columns = 2 };
         
         return SupportedLayouts[DefaultLayoutIndex];
+    }
+
+    public GridLayout GetRandomLayout()
+    {
+        if (SupportedLayouts == null || SupportedLayouts.Length == 0)
+            return new GridLayout { Name = "2x2", Rows = 2, Columns = 2 };
+
+        int randomIndex = Random.Range(0, SupportedLayouts.Length);
+        return SupportedLayouts[randomIndex];
     }
 
     public Sprite GetSpriteFromAtlas(string spriteName)
