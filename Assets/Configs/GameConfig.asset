@@ -20,7 +20,7 @@ MonoBehaviour:
     Rows: 3
     Columns: 3
   DefaultLayoutIndex: 0
-  CardSize: {x: 200, y: 260}
+  CardSize: {x: 125, y: 150}
   CardSpacing: {x: 0.2, y: 0.2}
   CardAtlas: {fileID: 4343727234628468602, guid: 3e97d9396fa5a734d8ae50296bc9f1bb, type: 2}
   CardBaseSprite: {fileID: 21300000, guid: 35b31b1b2d6e64543917ee363ae339e9, type: 3}

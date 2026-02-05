@@ -6,13 +6,15 @@ public class CardController
 {
     private GameStateMachine stateMachine;
     private GameConfig config;
+    private AnimationService animationService;
     private List<CardView> revealedCards = new List<CardView>();
     private CancellationTokenSource cts;
 
-    public CardController(GameStateMachine gameStateMachine, GameConfig gameConfig)
+    public CardController(GameStateMachine gameStateMachine, GameConfig gameConfig, AnimationService animService)
     {
         stateMachine = gameStateMachine;
         config = gameConfig;
+        animationService = animService;
         cts = new CancellationTokenSource();
     }
 
@@ -42,6 +44,10 @@ public class CardController
 
     private async UniTaskVoid RevealCardAsync(CardView cardView, CancellationToken cancellationToken)
     {
+        cardView.Model.CurrentState = CardState.Revealing;
+        
+        await animationService.AnimateCardFlip(cardView, true, cancellationToken);
+        
         cardView.Model.CurrentState = CardState.Revealed;
         cardView.UpdateVisuals();
         revealedCards.Add(cardView);
@@ -73,6 +79,9 @@ public class CardController
             second.Model.CurrentState = CardState.Matched;
             stateMachine.ChangeState(GameState.Matched);
             
+            await animationService.AnimateMatch(first, cancellationToken);
+            await animationService.AnimateMatch(second, cancellationToken);
+            
             await UniTask.Delay((int)(config.MatchDelay * 1000), cancellationToken: cancellationToken);
             
             first.SetInteractable(false);
@@ -86,10 +95,17 @@ public class CardController
             second.Model.CurrentState = CardState.Mismatched;
             stateMachine.ChangeState(GameState.Mismatched);
             
+            await animationService.AnimateMismatch(first, cancellationToken);
+            await animationService.AnimateMismatch(second, cancellationToken);
+            
             await UniTask.Delay((int)(config.MismatchDelay * 1000), cancellationToken: cancellationToken);
             
             first.Model.CurrentState = CardState.Hidden;
             second.Model.CurrentState = CardState.Hidden;
+            
+            await animationService.AnimateCardFlip(first, false, cancellationToken);
+            await animationService.AnimateCardFlip(second, false, cancellationToken);
+            
             first.UpdateVisuals();
             second.UpdateVisuals();
             

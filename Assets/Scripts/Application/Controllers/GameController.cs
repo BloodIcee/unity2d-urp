@@ -1,22 +1,35 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Zenject;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 
 public class GameController : MonoBehaviour
 {
-    [SerializeField] private GameConfig gameConfig;
     [SerializeField] private CardObjectPool cardPool;
     [SerializeField] private GridView gridView;
 
+    private GameConfig gameConfig;
     private GameStateMachine stateMachine;
     private CardController cardController;
+    private AnimationService animationService;
     private GameModel gameModel;
     private GridModel gridModel;
     private List<CardView> activeCards = new List<CardView>();
+    private CancellationTokenSource cts;
 
-    private void Awake()
+    [Inject]
+    public void Construct(
+        GameConfig config,
+        GameStateMachine gameStateMachine,
+        CardController controller,
+        AnimationService animService)
     {
-        stateMachine = new GameStateMachine();
-        cardController = new CardController(stateMachine, gameConfig);
+        gameConfig = config;
+        stateMachine = gameStateMachine;
+        cardController = controller;
+        animationService = animService;
+        cts = new CancellationTokenSource();
     }
 
     private void Start()
@@ -110,6 +123,9 @@ public class GameController : MonoBehaviour
                 gameConfig.CardBackSprite
             );
             activeCards.Add(cardView);
+            
+            float staggerDelay = i * gameConfig.StaggerDelay;
+            animationService.AnimateCardSpawn(cardView, staggerDelay, cts.Token).Forget();
         }
     }
 
@@ -124,6 +140,8 @@ public class GameController : MonoBehaviour
 
     private void OnDestroy()
     {
+        cts?.Cancel();
+        cts?.Dispose();
         cardController?.Dispose();
     }
 }
