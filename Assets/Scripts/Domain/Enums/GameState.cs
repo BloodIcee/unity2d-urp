@@ -6,5 +6,6 @@ public enum GameState
     ComparingCards,
     Matched,
     Mismatched,
+    Finished,
     GameOver
 }

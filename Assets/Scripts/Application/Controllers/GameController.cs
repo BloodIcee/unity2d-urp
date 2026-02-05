@@ -8,6 +8,7 @@ public class GameController : MonoBehaviour
 {
     [SerializeField] private CardObjectPool cardPool;
     [SerializeField] private GridView gridView;
+    [SerializeField] private ScoreView scoreView;
 
     private GameConfig gameConfig;
     private GameStateMachine stateMachine;
@@ -15,6 +16,7 @@ public class GameController : MonoBehaviour
     private AnimationService animationService;
     private GameModel gameModel;
     private GridModel gridModel;
+    private IScoringService scoringService;
     private List<CardView> activeCards = new List<CardView>();
     private CancellationTokenSource cts;
 
@@ -23,17 +25,74 @@ public class GameController : MonoBehaviour
         GameConfig config,
         GameStateMachine gameStateMachine,
         CardController controller,
-        AnimationService animService)
+        AnimationService animService,
+        IScoringService scoring,
+        GameModel model)
     {
         gameConfig = config;
         stateMachine = gameStateMachine;
         cardController = controller;
         animationService = animService;
+        scoringService = scoring;
+        gameModel = model;
         cts = new CancellationTokenSource();
     }
 
     private void Start()
     {
+        InitializeGame();
+        
+        scoringService.OnScoreUpdated += OnScoreUpdated;
+        scoringService.OnComboUpdated += OnComboUpdated;
+        scoringService.OnMatchesUpdated += OnMatchesUpdated;
+        cardController.OnGameWon += OnGameWon;
+    }
+
+    private void OnScoreUpdated(int score)
+    {
+        if (scoreView != null)
+            scoreView.UpdateScore(score);
+    }
+
+    private void OnComboUpdated(int combo)
+    {
+        if (scoreView != null)
+            scoreView.UpdateCombo(combo);
+    }
+
+    private void OnMatchesUpdated(int matches)
+    {
+        if (scoreView != null)
+            scoreView.UpdateMatches(matches);
+    }
+
+    private void OnGameWon()
+    {
+        RestartGameAsync().Forget();
+    }
+
+    public void RestartGame()
+    {
+        cts?.Cancel();
+        cts?.Dispose();
+        cts = new CancellationTokenSource();
+
+        RestartGameAsync().Forget();
+    }
+
+    private async UniTaskVoid RestartGameAsync()
+    {
+        stateMachine.ChangeState(GameState.Finished);
+        
+        if (activeCards.Count > 0)
+        {
+            await animationService.AnimateGridHide(activeCards, cts.Token);
+        }
+        
+        gameModel.Reset();
+        scoringService.Reset();
+        cardController.Reset();
+
         InitializeGame();
     }
 
@@ -52,7 +111,7 @@ public class GameController : MonoBehaviour
         ClearGrid();
 
         gridModel = new GridModel(layout.Rows, layout.Columns);
-        gameModel = new GameModel(gridModel);
+        gameModel.Initialize(gridModel);
 
         gridView.SetupGrid(
             layout.Rows, 
@@ -71,12 +130,11 @@ public class GameController : MonoBehaviour
         
         List<Sprite> availableSprites = GetAvailableSprites();
         
-        // Randomize sprites selection
         ShuffleSprites(availableSprites);
 
         if (availableSprites.Count < totalPairs)
         {
-            UnityEngine.Debug.LogError($"Not enough sprites! Need {totalPairs}, have {availableSprites.Count}");
+            Debug.LogError($"Not enough sprites! Need {totalPairs}, have {availableSprites.Count}");
             return cards;
         }
 
@@ -123,18 +181,13 @@ public class GameController : MonoBehaviour
         
         if (gameConfig.CardAtlas == null)
         {
-            UnityEngine.Debug.LogError("CardAtlas is null!");
+            Debug.LogError("CardAtlas is null!");
             return sprites;
         }
 
         int spriteCount = gameConfig.CardAtlas.spriteCount;
         for (int i = 0; i < spriteCount; i++)
         {
-            // Assuming sprites are named card_0, card_1, etc.
-            // Or we can just get all sprites if we want to be more generic, 
-            // but the original code used specific naming. keeping it but maybe we should make it looser?
-            // The user said: "should be taken randomly from sprite atlas, not sequentially".
-            // So getting them by name is fine, as long as we get ALL of them then shuffle.
             Sprite sprite = gameConfig.CardAtlas.GetSprite($"card_{i}");
             if (sprite != null)
                 sprites.Add(sprite);
@@ -142,7 +195,7 @@ public class GameController : MonoBehaviour
         
         if (sprites.Count == 0)
         {
-            UnityEngine.Debug.LogError("No sprites found in CardAtlas! Make sure sprites are named: card_0, card_1, etc.");
+            Debug.LogError("No sprites found in CardAtlas! Make sure sprites are named: card_0, card_1, etc.");
         }
 
         return sprites;
@@ -179,6 +232,18 @@ public class GameController : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (scoringService != null)
+        {
+            scoringService.OnScoreUpdated -= OnScoreUpdated;
+            scoringService.OnComboUpdated -= OnComboUpdated;
+            scoringService.OnMatchesUpdated -= OnMatchesUpdated;
+        }
+
+        if (cardController != null)
+        {
+            cardController.OnGameWon -= OnGameWon;
+        }
+
         cts?.Cancel();
         cts?.Dispose();
         cardController?.Dispose();

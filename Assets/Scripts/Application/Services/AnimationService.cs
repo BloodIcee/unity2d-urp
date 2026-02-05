@@ -2,6 +2,7 @@ using UnityEngine;
 using DG.Tweening;
 using Cysharp.Threading.Tasks;
 using System.Threading;
+using System.Collections.Generic;
 
 public class AnimationService
 {
@@ -148,6 +149,24 @@ public class AnimationService
 
         spawnSequence.SetLink(card.gameObject);
         await WaitForTween(spawnSequence, cancellationToken);
+    }
+
+    public async UniTask AnimateGridHide(List<CardView> cards, CancellationToken cancellationToken)
+    {
+        List<UniTask> tasks = new List<UniTask>();
+        
+        foreach (var card in cards)
+        {
+            if (card == null) continue;
+            
+            RectTransform transform = card.transform as RectTransform;
+            if (transform == null) continue;
+
+            Tween scaleTween = transform.DOScale(Vector3.zero, 0.3f).SetEase(Ease.InBack);
+            tasks.Add(WaitForTween(scaleTween, cancellationToken));
+        }
+
+        await UniTask.WhenAll(tasks);
     }
 
     private async UniTask WaitForTween(Tween tween, CancellationToken cancellationToken)

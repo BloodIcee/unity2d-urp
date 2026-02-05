@@ -8,7 +8,11 @@ public class GameModel
     public int CurrentMatches { get; private set; }
     public bool IsGameComplete => CurrentMatches >= TotalMatches;
 
-    public GameModel(GridModel grid)
+    public GameModel()
+    {
+    }
+
+    public void Initialize(GridModel grid)
     {
         Grid = grid;
         TotalMatches = grid.TotalCards / 2;

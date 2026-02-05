@@ -10,13 +10,25 @@ public class CardController
     private List<CardView> selectedCards = new List<CardView>();
     private CancellationTokenSource cts;
 
+    public System.Action OnGameWon;
+
+    private readonly GameModel gameModel;
+    private readonly IScoringService scoringService;
+
     private HashSet<CardView> processingCards = new HashSet<CardView>();
 
-    public CardController(GameStateMachine gameStateMachine, GameConfig gameConfig, AnimationService animService)
+    public CardController(
+        GameStateMachine gameStateMachine, 
+        GameConfig gameConfig, 
+        AnimationService animService,
+        GameModel model,
+        IScoringService scoring)
     {
         stateMachine = gameStateMachine;
         config = gameConfig;
         animationService = animService;
+        gameModel = model;
+        scoringService = scoring;
         cts = new CancellationTokenSource();
     }
 
@@ -33,6 +45,15 @@ public class CardController
 
     private bool CanRevealCard(CardView cardView)
     {
+        if (stateMachine.CurrentState != GameState.Idle && 
+            stateMachine.CurrentState != GameState.CardRevealing &&
+            stateMachine.CurrentState != GameState.ComparingCards &&
+            stateMachine.CurrentState != GameState.Matched && 
+            stateMachine.CurrentState != GameState.Mismatched)
+        {
+            return false;
+        }
+
         CardState state = cardView.Model.CurrentState;
         
         if (state != CardState.Hidden)
@@ -83,10 +104,21 @@ public class CardController
             first.Model.CurrentState = CardState.Matched;
             second.Model.CurrentState = CardState.Matched;
             
+            scoringService.OnMatch();
+            gameModel.IncrementMatches();
+
             await UniTask.WhenAll(
                 animationService.AnimateMatch(first, cancellationToken),
                 animationService.AnimateMatch(second, cancellationToken)
             );
+
+            if (gameModel.IsGameComplete)
+            {
+                OnGameWon?.Invoke();
+                processingCards.Remove(first);
+                processingCards.Remove(second);
+                return;
+            }
             
             await UniTask.Delay((int)(config.MatchDelay * 1000), cancellationToken: cancellationToken);
             
@@ -95,6 +127,8 @@ public class CardController
         }
         else
         {
+            scoringService.OnMismatch();
+
             first.Model.CurrentState = CardState.Mismatched;
             second.Model.CurrentState = CardState.Mismatched;
             

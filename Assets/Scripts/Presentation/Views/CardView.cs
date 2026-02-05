@@ -95,10 +95,31 @@ public class CardView : MonoBehaviour, IPointerClickHandler
         model = null;
         controller = null;
         
+        transform.localScale = Vector3.one;
+        transform.localRotation = Quaternion.identity;
+
         if (baseImage != null)
+        {
             baseImage.gameObject.SetActive(false);
+            baseImage.rectTransform.localRotation = Quaternion.identity;
+        }
+
         if (backImage != null)
+        {
             backImage.gameObject.SetActive(true);
+            backImage.rectTransform.localRotation = Quaternion.identity;
+        }
+        
+        if (cardImage != null)
+        {
+            cardImage.color = new Color(1, 1, 1, 0);
+        }
+
+        CanvasGroup cg = GetComponent<CanvasGroup>();
+        if (cg != null)
+        {
+            cg.alpha = 1f;
+        }
         
         SetInteractable(false);
     }

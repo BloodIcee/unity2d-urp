@@ -8,7 +8,7 @@ public class GameConfig : ScriptableObject
     public GridLayout[] SupportedLayouts;
     public int DefaultLayoutIndex = 0;
     
-    [Header("Card Settings")]
+    [Header("Card Settings"), Tooltip("These values are an example for cardds scale")]
     public Vector2 CardSize = new Vector2(1.8f, 2.4f);
     
     [Header("Card Sprites")]
