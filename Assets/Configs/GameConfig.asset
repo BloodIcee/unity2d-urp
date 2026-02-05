@@ -12,12 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8878ebed666b54042afa6ac575001c12, type: 3}
   m_Name: GameConfig
   m_EditorClassIdentifier: 
-  SupportedLayouts: []
+  SupportedLayouts:
+  - Name: 2x2
+    Rows: 2
+    Columns: 2
+  - Name: 3x3
+    Rows: 3
+    Columns: 3
   DefaultLayoutIndex: 0
-  CardSize: {x: 1.8, y: 2.4}
+  CardSize: {x: 200, y: 260}
   CardSpacing: {x: 0.2, y: 0.2}
-  CardBackSprite: {fileID: 0}
-  CardSprites: []
+  CardAtlas: {fileID: 4343727234628468602, guid: 3e97d9396fa5a734d8ae50296bc9f1bb, type: 2}
+  CardBaseSprite: {fileID: 21300000, guid: 35b31b1b2d6e64543917ee363ae339e9, type: 3}
+  CardBackSprite: {fileID: 21300000, guid: 1b76165561c821c4486d7e22b54ce735, type: 3}
   CardFlipDuration: 0.3
   MatchDelay: 0.5
   MismatchDelay: 1

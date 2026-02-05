@@ -74,18 +74,18 @@ SpriteAtlas:
   - {fileID: 21300000, guid: 934dcd3c41b3e1b4992a79109e7e3ff3, type: 3}
   - {fileID: 21300000, guid: be61f86c548195c459fd3d6c56fe248a, type: 3}
   m_PackedSpriteNamesToIndex:
-  - Whale
-  - Koala
-  - Bee
-  - Frog
-  - Deer
-  - Crab
-  - Turtle
-  - Dog
-  - Elephant
-  - Fox
-  - Chick
-  - Cat
+  - card_12
+  - card_10
+  - card_0
+  - card_9
+  - card_5
+  - card_4
+  - card_11
+  - card_6
+  - card_7
+  - card_8
+  - card_3
+  - card_1
   m_RenderDataMap: {}
   m_Tag: AnimalsSpriteAtlas
   m_IsVariant: 0

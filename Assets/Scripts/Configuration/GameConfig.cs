@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.U2D;
 
 [CreateAssetMenu(fileName = "GameConfig", menuName = "Card Game/Game Config")]
 public class GameConfig : ScriptableObject
@@ -10,8 +11,11 @@ public class GameConfig : ScriptableObject
     [Header("Card Settings")]
     public Vector2 CardSize = new Vector2(1.8f, 2.4f);
     public Vector2 CardSpacing = new Vector2(0.2f, 0.2f);
+    
+    [Header("Card Sprites")]
+    public SpriteAtlas CardAtlas;
+    public Sprite CardBaseSprite;
     public Sprite CardBackSprite;
-    public Sprite[] CardSprites;
     
     [Header("Animation Timings")]
     public float CardFlipDuration = 0.3f;
@@ -30,5 +34,13 @@ public class GameConfig : ScriptableObject
             return new GridLayout { Name = "2x2", Rows = 2, Columns = 2 };
         
         return SupportedLayouts[DefaultLayoutIndex];
+    }
+
+    public Sprite GetSpriteFromAtlas(string spriteName)
+    {
+        if (CardAtlas == null)
+            return null;
+        
+        return CardAtlas.GetSprite(spriteName);
     }
 }
