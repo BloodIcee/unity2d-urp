@@ -26,6 +26,11 @@ public class GameConfig : ScriptableObject
     public int BaseMatchScore = 100;
     public float ComboMultiplier = 1.5f;
     public int MismatchPenalty = 10;
+    
+    [Header("Moves")]
+    [Tooltip("Moves = Pairs * Multiplier + Base")]
+    public float MoveCountMultiplier = 2.0f;
+    public int BaseMoves = 4;
 
     public void OnValidate()
     {

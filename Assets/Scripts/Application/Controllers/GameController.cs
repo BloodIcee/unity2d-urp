@@ -17,6 +17,7 @@ public class GameController : MonoBehaviour
     private GameModel gameModel;
     private GridModel gridModel;
     private IScoringService scoringService;
+    private AudioManager audioManager;
     private List<CardView> activeCards = new List<CardView>();
     private CancellationTokenSource cts;
 
@@ -27,7 +28,8 @@ public class GameController : MonoBehaviour
         CardController controller,
         AnimationService animService,
         IScoringService scoring,
-        GameModel model)
+        GameModel model,
+        AudioManager audio)
     {
         gameConfig = config;
         stateMachine = gameStateMachine;
@@ -35,6 +37,7 @@ public class GameController : MonoBehaviour
         animationService = animService;
         scoringService = scoring;
         gameModel = model;
+        audioManager = audio;
         cts = new CancellationTokenSource();
     }
 
@@ -46,6 +49,8 @@ public class GameController : MonoBehaviour
         scoringService.OnComboUpdated += OnComboUpdated;
         scoringService.OnMatchesUpdated += OnMatchesUpdated;
         cardController.OnGameWon += OnGameWon;
+        cardController.OnGameLost += OnGameLost;
+        cardController.OnMovesUpdated += OnMovesUpdated;
     }
 
     private void OnScoreUpdated(int score)
@@ -66,9 +71,44 @@ public class GameController : MonoBehaviour
             scoreView.UpdateMatches(matches);
     }
 
+    private void OnMovesUpdated(int moves)
+    {
+        if (scoreView != null)
+            scoreView.UpdateMoves(moves);
+    }
+
+    private void OnGameLost()
+    {
+        if (stateMachine.CurrentState == GameState.Finished) return;
+        PlayGameLostSequence().Forget();
+    }
+
+    private async UniTaskVoid PlayGameLostSequence()
+    {
+        stateMachine.ChangeState(GameState.Finished);
+        cardController.StopAll();
+        audioManager.PlaySfx(SfxType.GameOver);
+        
+        await UniTask.Delay(1000, cancellationToken: cts.Token);
+        RestartGameAsync(true).Forget();
+    }
+
     private void OnGameWon()
     {
-        RestartGameAsync().Forget();
+        if (stateMachine.CurrentState == GameState.Finished) return;
+        PlayGameWonSequence().Forget();
+    }
+
+    private async UniTaskVoid PlayGameWonSequence()
+    {
+        stateMachine.ChangeState(GameState.Finished);
+        cardController.StopAll();
+        
+        await audioManager.PlayGameOverWithDelayAsync();
+        
+        if (cts.IsCancellationRequested) return;
+
+        RestartGameAsync(false).Forget();
     }
 
     public void RestartGame()
@@ -77,20 +117,37 @@ public class GameController : MonoBehaviour
         cts?.Dispose();
         cts = new CancellationTokenSource();
 
-        RestartGameAsync().Forget();
+        RestartGameAsync(true).Forget();
     }
 
-    private async UniTaskVoid RestartGameAsync()
+    private async UniTaskVoid RestartGameAsync(bool fullReset)
     {
         stateMachine.ChangeState(GameState.Finished);
+        cardController.StopAll();
         
         if (activeCards.Count > 0)
         {
-            await animationService.AnimateGridHide(activeCards, cts.Token);
+            try
+            {
+                await animationService.AnimateGridHide(activeCards, cts.Token);
+            }
+            catch (System.OperationCanceledException)
+            {
+                return;
+            }
         }
         
         gameModel.Reset();
-        scoringService.Reset();
+        
+        if (fullReset)
+        {
+            scoringService.Reset();
+        }
+        else
+        {
+            scoringService.ResetCombo();
+        }
+
         cardController.Reset();
 
         InitializeGame();
@@ -111,7 +168,14 @@ public class GameController : MonoBehaviour
         ClearGrid();
 
         gridModel = new GridModel(layout.Rows, layout.Columns);
-        gameModel.Initialize(gridModel);
+        
+        int totalPairs = gridModel.TotalCards / 2;
+        int totalMoves = Mathf.CeilToInt(totalPairs * gameConfig.MoveCountMultiplier) + gameConfig.BaseMoves;
+        
+        gameModel.Initialize(gridModel, totalMoves);
+
+        if (scoreView != null)
+            scoreView.UpdateMoves(totalMoves);
 
         gridView.SetupGrid(
             layout.Rows, 
@@ -133,10 +197,7 @@ public class GameController : MonoBehaviour
         ShuffleSprites(availableSprites);
 
         if (availableSprites.Count < totalPairs)
-        {
-            Debug.LogError($"Not enough sprites! Need {totalPairs}, have {availableSprites.Count}");
             return cards;
-        }
 
         for (int pairId = 0; pairId < totalPairs; pairId++)
         {
@@ -180,10 +241,7 @@ public class GameController : MonoBehaviour
         List<Sprite> sprites = new List<Sprite>();
         
         if (gameConfig.CardAtlas == null)
-        {
-            Debug.LogError("CardAtlas is null!");
             return sprites;
-        }
 
         int spriteCount = gameConfig.CardAtlas.spriteCount;
         for (int i = 0; i < spriteCount; i++)
@@ -191,11 +249,6 @@ public class GameController : MonoBehaviour
             Sprite sprite = gameConfig.CardAtlas.GetSprite($"card_{i}");
             if (sprite != null)
                 sprites.Add(sprite);
-        }
-        
-        if (sprites.Count == 0)
-        {
-            Debug.LogError("No sprites found in CardAtlas! Make sure sprites are named: card_0, card_1, etc.");
         }
 
         return sprites;
@@ -242,6 +295,8 @@ public class GameController : MonoBehaviour
         if (cardController != null)
         {
             cardController.OnGameWon -= OnGameWon;
+            cardController.OnGameLost -= OnGameLost;
+            cardController.OnMovesUpdated -= OnMovesUpdated;
         }
 
         cts?.Cancel();

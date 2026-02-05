@@ -52,12 +52,4 @@ public class GridView : MonoBehaviour
         gridLayout.cellSize = new Vector2(cellW, cellH);
         gridLayout.spacing = new Vector2(spacing, spacing);
     }
-
-    public void ClearGrid()
-    {
-        foreach (Transform child in transform)
-        {
-            Destroy(child.gameObject);
-        }
-    }
 }

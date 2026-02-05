@@ -7,4 +7,5 @@ public interface IScoringService
     void OnMatch();
     void OnMismatch();
     void Reset();
+    void ResetCombo();
 }

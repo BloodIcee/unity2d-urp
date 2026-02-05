@@ -22,10 +22,7 @@ public class AudioManager : MonoBehaviour
     private void Initialize()
     {
         if (config == null)
-        {
-            Debug.LogError("No config");
             return;
-        }
 
         _clips = config.GetClipsDictionary();
         _pool = new List<AudioSource>();

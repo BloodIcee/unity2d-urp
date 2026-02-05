@@ -52,4 +52,10 @@ public class ScoringService : IScoringService
         OnScoreUpdated?.Invoke(scoreModel.CurrentScore);
         OnMatchesUpdated?.Invoke(scoreModel.Matches);
     }
+
+    public void ResetCombo()
+    {
+        scoreModel.CurrentCombo = 0;
+        OnComboUpdated?.Invoke(scoreModel.CurrentCombo);
+    }
 }

@@ -7,6 +7,7 @@ public class ScoreView : MonoBehaviour
     [SerializeField] private TextMeshProUGUI scoreText;
     [SerializeField] private TextMeshProUGUI comboText;
     [SerializeField] private TextMeshProUGUI matchesText;
+    [SerializeField] private TextMeshProUGUI movesText;
     [SerializeField] private CanvasGroup comboGroup;
 
     private void Awake()
@@ -21,7 +22,7 @@ public class ScoreView : MonoBehaviour
     {
         if (scoreText != null)
         {
-            scoreText.text = $"Score: {score}";
+            scoreText.SetText($"Score: {score}");
             scoreText.transform.DOPunchScale(Vector3.one * 0.2f, 0.2f);
         }
     }
@@ -33,7 +34,7 @@ public class ScoreView : MonoBehaviour
 
         if (combo > 1)
         {
-            comboText.text = $"Combo x{combo}!";
+            comboText.SetText($"Combo x{combo}!");
             comboGroup.alpha = 1f;
             
             comboText.transform.DOKill();
@@ -62,8 +63,23 @@ public class ScoreView : MonoBehaviour
     {
         if (matchesText != null)
         {
-            matchesText.text = $"Matches: {matches}";
+            matchesText.SetText($"Matches: {matches}");
             matchesText.transform.DOPunchScale(Vector3.one * 0.2f, 0.2f);
+        }
+    }
+
+    public void UpdateMoves(int moves)
+    {
+        if (movesText != null)
+        {
+            movesText.SetText($"Moves: {moves}");
+            
+            if (moves <= 3)
+                movesText.color = Color.red;
+            else
+                movesText.color = Color.white;
+                
+            movesText.transform.DOPunchScale(Vector3.one * 0.2f, 0.2f);
         }
     }
 }

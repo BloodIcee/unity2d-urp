@@ -11,9 +11,14 @@ public class CardController
     private CancellationTokenSource cts;
 
     public System.Action OnGameWon;
+    public System.Action OnGameLost;
+    public System.Action<int> OnMovesUpdated;
+    
+    private bool isGameEnding;
 
     private readonly GameModel gameModel;
     private readonly IScoringService scoringService;
+    private readonly AudioManager audioManager;
 
     private HashSet<CardView> processingCards = new HashSet<CardView>();
 
@@ -22,13 +27,15 @@ public class CardController
         GameConfig gameConfig, 
         AnimationService animService,
         GameModel model,
-        IScoringService scoring)
+        IScoringService scoring,
+        AudioManager audio)
     {
         stateMachine = gameStateMachine;
         config = gameConfig;
         animationService = animService;
         gameModel = model;
         scoringService = scoring;
+        audioManager = audio;
         cts = new CancellationTokenSource();
     }
 
@@ -46,10 +53,7 @@ public class CardController
     private bool CanRevealCard(CardView cardView)
     {
         if (stateMachine.CurrentState != GameState.Idle && 
-            stateMachine.CurrentState != GameState.CardRevealing &&
-            stateMachine.CurrentState != GameState.ComparingCards &&
-            stateMachine.CurrentState != GameState.Matched && 
-            stateMachine.CurrentState != GameState.Mismatched)
+            stateMachine.CurrentState != GameState.CardRevealing)
         {
             return false;
         }
@@ -70,12 +74,25 @@ public class CardController
 
         return true;
     }
+    
+    public void StopAll()
+    {
+        cts?.Cancel();
+        cts?.Dispose();
+        cts = new CancellationTokenSource();
+        selectedCards.Clear();
+        processingCards.Clear();
+    }
 
     private async UniTaskVoid RevealCardAsync(CardView cardView, CancellationToken cancellationToken)
     {
+        if (stateMachine.CurrentState == GameState.Idle)
+            stateMachine.ChangeState(GameState.CardRevealing);
+
         selectedCards.Add(cardView);
         processingCards.Add(cardView);
         
+        audioManager.PlaySfx(SfxType.Flip);
         await animationService.AnimateCardFlip(cardView, true, cancellationToken);
         
         cardView.Model.CurrentState = CardState.Revealed;
@@ -97,6 +114,9 @@ public class CardController
         CardView first = pair[0];
         CardView second = pair[1];
 
+        gameModel.DecrementMoves();
+        OnMovesUpdated?.Invoke(gameModel.MovesLeft);
+
         bool isMatch = first.Model.IsPairWith(second.Model);
 
         if (isMatch)
@@ -106,14 +126,16 @@ public class CardController
             
             scoringService.OnMatch();
             gameModel.IncrementMatches();
+            audioManager.PlaySfx(SfxType.Match);
 
             await UniTask.WhenAll(
                 animationService.AnimateMatch(first, cancellationToken),
                 animationService.AnimateMatch(second, cancellationToken)
             );
 
-            if (gameModel.IsGameComplete)
+            if (gameModel.IsGameComplete && !isGameEnding)
             {
+                isGameEnding = true;
                 OnGameWon?.Invoke();
                 processingCards.Remove(first);
                 processingCards.Remove(second);
@@ -128,6 +150,7 @@ public class CardController
         else
         {
             scoringService.OnMismatch();
+            audioManager.PlaySfx(SfxType.Mismatch);
 
             first.Model.CurrentState = CardState.Mismatched;
             second.Model.CurrentState = CardState.Mismatched;
@@ -151,8 +174,18 @@ public class CardController
             second.UpdateVisuals();
         }
 
+        if (gameModel.IsGameLost && !isGameEnding)
+        {
+             isGameEnding = true;
+             OnGameLost?.Invoke();
+             return;
+        }
+
         processingCards.Remove(first);
         processingCards.Remove(second);
+        
+        if (!isGameEnding)
+            stateMachine.ChangeState(GameState.Idle);
     }
 
     public void Reset()
@@ -162,6 +195,7 @@ public class CardController
         cts = new CancellationTokenSource();
         selectedCards.Clear();
         processingCards.Clear();
+        isGameEnding = false;
     }
 
     public void Dispose()

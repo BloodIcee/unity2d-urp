@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using DG.Tweening;
 
 public class CardView : MonoBehaviour, IPointerClickHandler
 {
@@ -91,6 +92,11 @@ public class CardView : MonoBehaviour, IPointerClickHandler
 
     public void ResetCard()
     {
+        // Kill all tweens on this transform to prevent lingering animations
+        transform.DOKill();
+        if (cardImage != null) cardImage.transform.DOKill();
+        if (backImage != null) backImage.transform.DOKill();
+
         isInitialized = false;
         model = null;
         controller = null;
