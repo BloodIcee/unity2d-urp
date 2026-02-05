@@ -5,9 +5,9 @@ using UnityEngine.EventSystems;
 public class CardView : MonoBehaviour, IPointerClickHandler
 {
     [SerializeField] private Image cardImage;
-    [SerializeField] private RectTransform frontContainer;
-    [SerializeField] private Image bodyImage;
     [SerializeField] private Image backImage;
+    [SerializeField] private Image baseImage;
+    [SerializeField] private Image bodyImage;
     
     private CardModel model;
     private CardController controller;
@@ -15,8 +15,8 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     private bool interactable = true;
 
     public CardModel Model => model;
-    public RectTransform FrontContainer => frontContainer;
-    public RectTransform BackContainer => backImage != null ? backImage.rectTransform : null;
+    public Image BaseImage => baseImage;
+    public Image BackImage => backImage;
     public bool IsRevealed => model != null && 
         (model.CurrentState == CardState.Revealed || model.CurrentState == CardState.Matched);
 
@@ -30,10 +30,12 @@ public class CardView : MonoBehaviour, IPointerClickHandler
 
     private void DisableRaycastOnChildren()
     {
-        if (bodyImage != null)
-            bodyImage.raycastTarget = false;
         if (backImage != null)
             backImage.raycastTarget = false;
+        if (baseImage != null)
+            baseImage.raycastTarget = false;
+        if (bodyImage != null)
+            bodyImage.raycastTarget = false;
     }
 
     public void Initialize(CardModel cardModel, CardController cardController, Sprite baseSprite, Sprite backSprite)
@@ -43,7 +45,13 @@ public class CardView : MonoBehaviour, IPointerClickHandler
         isInitialized = true;
 
         if (cardImage != null)
-            cardImage.sprite = baseSprite;
+        {
+            cardImage.sprite = null;
+            cardImage.color = new Color(1, 1, 1, 0);
+        }
+
+        if (baseImage != null)
+            baseImage.sprite = baseSprite;
         
         if (backImage != null)
             backImage.sprite = backSprite;
@@ -60,8 +68,8 @@ public class CardView : MonoBehaviour, IPointerClickHandler
         bool isRevealed = model.CurrentState == CardState.Revealed || 
                          model.CurrentState == CardState.Matched;
 
-        if (frontContainer != null)
-            frontContainer.gameObject.SetActive(isRevealed);
+        if (baseImage != null)
+            baseImage.gameObject.SetActive(isRevealed);
 
         if (bodyImage != null && model.FrontSprite != null)
             bodyImage.sprite = model.FrontSprite;
@@ -87,8 +95,8 @@ public class CardView : MonoBehaviour, IPointerClickHandler
         model = null;
         controller = null;
         
-        if (frontContainer != null)
-            frontContainer.gameObject.SetActive(false);
+        if (baseImage != null)
+            baseImage.gameObject.SetActive(false);
         if (backImage != null)
             backImage.gameObject.SetActive(true);
         

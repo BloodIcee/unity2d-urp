@@ -13,7 +13,7 @@ public class CardObjectPool : MonoBehaviour
     {
         if (poolContainer == null)
         {
-            poolContainer = new GameObject("Card Pool").transform;
+            poolContainer = new GameObject("PoolContainer").transform;
             poolContainer.parent = transform;
         }
 
